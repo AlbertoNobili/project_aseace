@@ -1,3 +1,5 @@
+#include <stdlib.h>
+
 // Global constant
 #define MAXINP      256     // maximum number of input units
 #define ASE_ETA0    10.0    // ASE default learning rate
@@ -30,7 +32,7 @@ float frand(float xmin, float xmax)
 {
 float range;
 	range = (xmax -xmin);
-	return xmin + range*(float)rand()/MAX_INT;
+	return xmin + range*(float)rand()/RAND_MAX;
 }
 
 int sign(float y)
