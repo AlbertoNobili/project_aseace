@@ -1,3 +1,6 @@
+#include <math.h>
+#include <stdio.h>
+
 // Physical constants
 #define LEFT_LIMIT	-3.0	// position of left block [m]
 #define RIGHT_LIMIT	3.0		// position of right block [m]
@@ -8,9 +11,9 @@
 #define FORCE		10		// force level [N]
 #define GRAVITY		9.8		// [m/s^2]
 
-// simulation constants
-#define MAXDUR		4000000L	// max duration
-#define MAXFAIL		1000000L	// max # of failures
+// Simulation constants
+#define MAXDUR		40000000L	// max duration
+#define MAXFAIL		10000000L	// max # of failures
 #define NBOXES		162			// # of state boxes
 
 // Cart structure
@@ -21,6 +24,9 @@ typedef struct{
 	float omega;
 } state;
 static state s;
+
+int view;
+int stop;
 
 //Auxiliary functions
 void set_state(float x, float v, float t, float w)
@@ -47,9 +53,9 @@ int update_state(float force)
 		ct = cos(s.theta);
 		st = sin(s.theta);
 		t_acc = ((CART_MASS + POLE_MASS)*GRAVITY*st - 
-					(FORCE+POLE_MASS*POLE_LEN*s.omega*s.omega*st)*ct)/
+					(force+POLE_MASS*POLE_LEN*s.omega*s.omega*st)*ct)/
 					(4/3*(CART_MASS+POLE_MASS)*POLE_LEN-POLE_MASS*POLE_LEN*ct*ct);
-		x_acc = (FORCE + POLE_MASS*POLE_LEN*(s.omega*s.omega*st-t_acc*ct))/(POLE_MASS+CART_MASS);
+		x_acc = (force + POLE_MASS*POLE_LEN*(s.omega*s.omega*st-t_acc*ct))/(POLE_MASS+CART_MASS);
 		dt = 0.01;			// integration step of 10 ms
 		s.pos   += s.speed*dt;
 		s.speed += x_acc*dt;
@@ -65,7 +71,6 @@ int update_state(float force)
 #define T6	0.10472
 #define W50	0.87266
 
-// first option
 int decode_state()
 {
 int box;
@@ -91,8 +96,97 @@ int box;
 
 	return box;
 }
+
+// External functions
+extern void init_net(int ni);
+extern int ase_output(int x);
+extern float ace_output(int x);
+extern void update_weights(int r);
+extern void update_eligibilities_traces(int x, int y);
+extern void decay_eligibilities_traces();
+extern void clear_eligibilities_traces();
+extern float secondary_reinforce(int r);
+
+extern void init_graphics();
+extern void display_cart(state s);
+extern void terminate_graphics();
+extern void read_key();
+extern void update_info(long epoch, long maxd);
+
+// Learning loop
+int main()
+{
+long total_steps;	// total # of steps
+long duration;		// # steps pole balanced
+long maxd;			// max duration 
+long failures;		// failure counter (epoch counter)
+int box;			// decoded state region
+int y;				// ASE output
+float p;			// ACE output
+int r;				// primary reinforce
+float sr;			// secondary reinforce
+int fail;			// failure flag
+float force;		// applied force to the cart	
+
+	init_graphics();
+	total_steps = 0;
+	duration = 0;
+	maxd = 0;
+	failures = 0;
+	init_net(NBOXES);
+	clear_eligibilities_traces();
+	set_state(0, 0, 0, 0);
+	box = decode_state();
+	while (1){
+	// Nota che failures corrisponde al numero di epoche 
+	// e quindi impostare un limite massimo MAXFAIL equivale
+	// a impostare un numero massimo di epoche.
+	// Dare un limite MAXDUR invece significa fermarsi quando 
+	// la rete ha imparato a tenere in equilibrio il palo 
+	// per un tempo sufficientemente lungo
+		read_key();
+		if(stop) break;
+		if(view){
+			display_cart(s);
+			//printf("Epoca %ld. Max durata = %ld\n", failures, maxd);
+		}
+		duration++;
+		total_steps++;
+
+		y = ase_output(box);
+		update_eligibilities_traces(box, y);
+		force = FORCE*y;
+		fail = update_state(force);
+		box = decode_state();
+		if (fail){
+			r = -1;
+			p = 0;	
+			failures++;
+			if (duration > maxd)
+				maxd = duration;
+			update_info(failures, maxd);
+			if(view)
+				printf("Fine dell'epoca %ld. Durata = %ld\n", failures, duration);
+			duration = 0;
+			set_state(0, 0, 0, 0);
+			box = decode_state();
+		} else {
+			r = 0;
+			p = ace_output(box);
+		}
+		sr = secondary_reinforce(r);
+		update_weights(sr);
+		if (fail) clear_eligibilities_traces();
+		else decay_eligibilities_traces();
+	}
+	if (duration > maxd){
+		maxd = duration;	//printf("ho assegnato la massima durata %ld all'epoca %ld\n", maxd, failures);
+	}
+	terminate_graphics();
+	printf("Main termintao.\nfailures = %ld; max duration = %ld\n", failures, maxd);
+}
 /*
-// second option
+// second option for state decoding
 int decode_x (float x)
 {
 	if (x < -XL)	return 0;
@@ -133,53 +227,3 @@ int box;
 			decode_w(s.omega)*NBX*NBV*NBT;
 	return box;
 } */
-
-// Learning loop
-int main()
-{
-long duration;		// # steps pole balanced
-long total_steps;	// total # of steps
-long failures;		// failure counter
-int box;			// decoded state region
-int y;				// ASE output
-float p;			// ACE output
-int r;				// primary reinforce
-float sr;			// secondary reinforce
-int fail;			// failure flag
-float force;		// applied force to the cart	
-state s;			// system state
-
-	duration = 0;
-	total_steps = 0;
-	failures = 0;
-	init_net(NBOXES);
-	clear_eligibilities_traces();
-	set_state(0, 0, 0, 0);
-	box = decode_state();
-
-	while ((duration < MAXDUR) && (failures > MAXFAIL)){
-		duration++;
-		total_steps++;
-
-		y = ase_output(box);
-		update_treces(box, y);
-		force = FORCE*y;
-		fail = update_state(force);
-		box = decode_state();
-		if (fail){
-			r = -1;
-			p = 0;
-			failures++;
-			duration = 0;
-			set_state(0, 0, 0, 0);
-			box = decode_state();
-		} else {
-			r = 0;
-			p = ace_output(box);
-		}
-		sr = secondary_reinforce(r);
-		update_weights(sr);
-		if (fail) clear_eligibilities_traces();
-		else decay_eligibilities_traces();
-	}
-}

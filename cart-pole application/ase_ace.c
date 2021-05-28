@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <stdio.h>
 
 // Global constant
 #define MAXINP      256     // maximum number of input units
@@ -9,11 +10,11 @@
 #define GAMMA0      0.95    // default prediction discount
 
 //Global variables
-static float ws[MAXINP];	// ASE weights
-static float wc[MAXINP];	// ACE weights
+static float 	ws[MAXINP];		// ASE weights
+static float 	wc[MAXINP];		// ACE weights
 
 static int		x[MAXINP];		// input vector
-static float    eligi[MAXINP];	// Ase eligibility vector
+static float    eligi[MAXINP];	// ASE eligibility vector
 static float	trace[MAXINP];	// ACE trace vector
 
 static float	ase_eta;	// ASE learning rate (alfa)
@@ -32,7 +33,7 @@ float frand(float xmin, float xmax)
 {
 float range;
 	range = (xmax -xmin);
-	return xmin + range*(float)rand()/RAND_MAX;
+	return xmin + range*rand()/(float)RAND_MAX;
 }
 
 int sign(float y)
@@ -59,10 +60,12 @@ int i;
 int ase_output(int x)
 {
 float net;
-int y;
+int y, temp;
 
-	net = ws[x] + frand(-0.5, 0.5);
+	net = ws[x] + frand(-0.7, 0.7);
+	temp = sign(ws[x]);
 	y = sign(net);
+	//printf("y = %d, temp = %d\n", y, temp);
 	return y;
 }
 
@@ -71,7 +74,7 @@ float ace_output(int x)
 	return wc[x];
 }
 
-void update_weights(int r)
+void update_weights(int r) //dobbiamo passargli il secondary reinforce
 {
 int i;
 
@@ -86,7 +89,7 @@ void update_eligibilities_traces(int x, int y){
 	trace[x] += (1.0 - ace_decay);
 }
 
-void decay_eligibilities_traces(int x)
+void decay_eligibilities_traces()
 {
 int i;
 
