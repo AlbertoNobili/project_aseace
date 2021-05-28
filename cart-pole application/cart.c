@@ -70,26 +70,116 @@ int decode_state()
 {
 int box;
 
-	if (s.pos < -XL)		box = 0;
+	if 		(s.pos < -XL)	box = 0;
 	else if (s.pos < XL)	box = 1;
 	else 					box = 2;
 
-	if (s.speed < -VL)		;
+	if 		(s.speed < -VL)	;
 	else if (s.speed < VL)	box +=3;
 	else					box += 6;	
 
-	if (s.theta < -T6)		;
+	if 		(s.theta < -T6)	;
 	else if (s.theta <-T1)	box += 9;
 	else if (s.theta < 0)	box += 18;
 	else if (s.theta < T1)	box += 27;
 	else if (s.theta < T6)	box += 36;
 	else 					box += 45;
 
-	if (s.omega < -W50)		;
+	if 		(s.omega < -W50);
 	else if (s.omega < W50)	box += 54;
 	else					box += 108;
 
 	return box;
 }
-
+/*
 // second option
+int decode_x (float x)
+{
+	if (x < -XL)	return 0;
+	if (x <  XL)	return 1;
+	else			return 2;
+}
+int decode_v (float v)
+{
+	if (v < -VL)	return 0;
+	if (v <  VL)	return 1;
+	else			return 2;
+}
+int decode_t (float t)
+{
+	if (t < -T6)	return 0;
+	if (t < -T1)	return 1;
+	if (t < 0)		return 2;
+	if (t < T1)		return 3;
+	if (t < T6)		return 4;
+	else			return 5;
+}
+int decode_w (float w)
+{
+	if (w < -W50)	return 0;
+	if (w < W50)	return 1;
+	else			return 2;
+}
+#define NBX	3
+#define NBV	3
+#define NBT	6
+#define NBW	3
+int decode_state()
+{
+int box;
+	box = decode_x(s.pos) + 
+			decode_v(s.speed)*NBX +
+			decode_t(s.theta)*NBX*NBV + 
+			decode_w(s.omega)*NBX*NBV*NBT;
+	return box;
+} */
+
+// Learning loop
+int main()
+{
+long duration;		// # steps pole balanced
+long total_steps;	// total # of steps
+long failures;		// failure counter
+int box;			// decoded state region
+int y;				// ASE output
+float p;			// ACE output
+int r;				// primary reinforce
+float sr;			// secondary reinforce
+int fail;			// failure flag
+float force;		// applied force to the cart	
+state s;			// system state
+
+	duration = 0;
+	total_steps = 0;
+	failures = 0;
+	init_net(NBOXES);
+	clear_eligibilities_traces();
+	set_state(0, 0, 0, 0);
+	box = decode_state();
+
+	while ((duration < MAXDUR) && (failures > MAXFAIL)){
+		duration++;
+		total_steps++;
+
+		y = ase_output(box);
+		update_treces(box, y);
+		force = FORCE*y;
+		fail = update_state(force);
+		box = decode_state();
+		if (fail){
+			r = -1;
+			p = 0;
+			failures++;
+			duration = 0;
+			set_state(0, 0, 0, 0);
+			box = decode_state();
+		} else {
+			r = 0;
+			p = ace_output(box);
+		}
+		sr = secondary_reinforce(r);
+		update_weights(sr);
+		if (fail) clear_eligibilities_traces();
+		else decay_eligibilities_traces();
+	}
+}
