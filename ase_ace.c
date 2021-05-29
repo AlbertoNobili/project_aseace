@@ -1,3 +1,4 @@
+#include "ase_ace.h"
 #include <stdlib.h>
 #include <stdio.h>
 
@@ -84,7 +85,8 @@ int i;
 	}
 }
 
-void update_eligibilities_traces(int x, int y){
+void update_eligibilities_traces(int x, int y)
+{
 	eligi[x] += (1.0 - ase_decay) * y;
 	trace[x] += (1.0 - ace_decay);
 }

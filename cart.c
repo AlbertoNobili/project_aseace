@@ -1,5 +1,6 @@
 #include <math.h>
 #include <stdio.h>
+#include "ase_ace.h"
 
 // Physical constants
 #define LEFT_LIMIT	-3.0	// position of left block [m]
@@ -25,8 +26,9 @@ typedef struct{
 } state;
 static state s;
 
-int view;
-int stop;
+// Variables manipulated by graphics.c
+int view;	// to know when display the cart evolution
+int stop;	// to know when to stop
 
 //Auxiliary functions
 void set_state(float x, float v, float t, float w)
@@ -97,16 +99,7 @@ int box;
 	return box;
 }
 
-// External functions
-extern void init_net(int ni);
-extern int ase_output(int x);
-extern float ace_output(int x);
-extern void update_weights(int r);
-extern void update_eligibilities_traces(int x, int y);
-extern void decay_eligibilities_traces();
-extern void clear_eligibilities_traces();
-extern float secondary_reinforce(int r);
-
+// External graphic functions
 extern void init_graphics();
 extern void display_cart(state s);
 extern void terminate_graphics();
@@ -146,10 +139,8 @@ float force;		// applied force to the cart
 	// per un tempo sufficientemente lungo
 		read_key();
 		if(stop) break;
-		if(view){
+		if(view)
 			display_cart(s);
-			//printf("Epoca %ld. Max durata = %ld\n", failures, maxd);
-		}
 		duration++;
 		total_steps++;
 
@@ -165,8 +156,6 @@ float force;		// applied force to the cart
 			if (duration > maxd)
 				maxd = duration;
 			update_info(failures, maxd);
-			if(view)
-				printf("Fine dell'epoca %ld. Durata = %ld\n", failures, duration);
 			duration = 0;
 			set_state(0, 0, 0, 0);
 			box = decode_state();
@@ -179,12 +168,12 @@ float force;		// applied force to the cart
 		if (fail) clear_eligibilities_traces();
 		else decay_eligibilities_traces();
 	}
-	if (duration > maxd){
-		maxd = duration;	//printf("ho assegnato la massima durata %ld all'epoca %ld\n", maxd, failures);
-	}
+	if (duration > maxd)
+		maxd = duration;	
 	terminate_graphics();
 	printf("Main termintao.\nfailures = %ld; max duration = %ld\n", failures, maxd);
 }
+
 /*
 // second option for state decoding
 int decode_x (float x)
