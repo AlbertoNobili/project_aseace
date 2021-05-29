@@ -27,7 +27,7 @@ LIBS = -lrt -lm `allegro-config --libs`
 $(MAIN): $(OBJS)
 	$(CC) $(CFLAGS) -o $(MAIN) $(OBJS) $(LIBS)
 
-$(OBJ1).o: $(OBJ1).c $(OJJ2).h
+$(OBJ1).o: $(OBJ1).c ase_ace.h
 	$(CC) $(CFLAGS) -c $(OBJ1).c
 
 $(OBJ2).o: $(OBJ2).c

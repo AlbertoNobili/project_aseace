@@ -47,15 +47,15 @@ BITMAP* buf;
 	//cancelliamo il cart precedente
 	clear_to_color(buf, BLK);
 	//draw body
-	rectfill(buf, x-CARTL/2-50, CARTU, x+CARTL/2, CARTB, CYAN);
+	rectfill(buf, x-CARTL/2, CARTU, x+CARTL/2, CARTB, CYAN);
 	//draw wheels
 	circlefill(buf, x+DIST, WHEELH, RADIUS, BLUE);
 	circlefill(buf, x-DIST, WHEELH, RADIUS, BLUE);
 	//draw pole
 	xpole = x + sin(s.theta)*LENGTH;
 	ypole = CARTU - cos(s.theta)*LENGTH;
-	line(screen, x, CARTU, xpole, ypole, GREY);
-	circlefill(screen, xpole, ypole, RADIUS, GREY);
+	line(buf, x, CARTU, xpole, ypole, GREY);
+	circlefill(buf, xpole, ypole, RADIUS, GREY);
 	//ricopiamo la bitmap
 	blit(buf, screen, 0, 0, 50, 20, buf->w, buf->h);
 
