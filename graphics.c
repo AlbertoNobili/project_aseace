@@ -36,14 +36,12 @@ typedef struct{
 	float omega;
 } state;
 
+BITMAP* buf;
 void display_cart(state s)
 {
 int x, xpole, ypole;
-BITMAP* buf;
 
 	x = s.pos*200+OFFSET; //centro del cart in coordinate pixel
-	//usiamo la bitmap come buffer
-	buf = create_bitmap(XBIT, YBIT);
 	//cancelliamo il cart precedente
 	clear_to_color(buf, BLK);
 	//draw body
@@ -85,6 +83,8 @@ void init_graphics()
 	rectfill(screen, XWIN-50, 80, XWIN, 200, RED);
 	//draw bottom
 	rectfill(screen, 0, 200, XWIN, YWIN, GREEN);
+	//create bitmap
+	buf = create_bitmap(XBIT, YBIT);
 
 	return;
 }
